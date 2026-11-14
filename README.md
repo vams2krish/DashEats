@@ -13,6 +13,10 @@ DashEats turns courier and rideshare work into a structured driving game. Player
 
 ## Product Demo
 
+**[Play the live production demo](https://dasheats-liard.vercel.app)**
+
+The deterministic DriverSim scene and complete delivery flow are available without a provider key. Google 3D and live weather require active Google Maps Platform billing; the game keeps the playable Three.js world and simulated weather available when those services cannot respond.
+
 ### Dispatch and driving
 
 | Job offer | Third-person drive |
@@ -109,7 +113,7 @@ Create a browser key and restrict it to those APIs. Add HTTP referrer restrictio
 ```text
 http://localhost:5173/*
 http://127.0.0.1:4178/*
-https://YOUR-VERCEL-DOMAIN/*
+https://dasheats-liard.vercel.app/*
 ```
 
 Then create `.env.local`:
