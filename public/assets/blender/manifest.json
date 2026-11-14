@@ -1,0 +1,22 @@
+[
+  {
+    "file": "dashcar.glb",
+    "bytes": 109232,
+    "collection": "DashCar"
+  },
+  {
+    "file": "traffic-van.glb",
+    "bytes": 69560,
+    "collection": "TrafficVan"
+  },
+  {
+    "file": "pedestrian.glb",
+    "bytes": 51208,
+    "collection": "Pedestrian"
+  },
+  {
+    "file": "service-kit.glb",
+    "bytes": 45800,
+    "collection": "ServiceKit"
+  }
+]

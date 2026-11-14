@@ -5,6 +5,8 @@
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
 [![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev/)
 [![Three.js](https://img.shields.io/badge/Three.js-WebGL-111111?logo=threedotjs&logoColor=white)](https://threejs.org/)
+[![Rapier](https://img.shields.io/badge/Rapier-3D%20physics-f07d3d)](https://rapier.rs/)
+[![Blender](https://img.shields.io/badge/Blender-5.2%20LTS-F5792A?logo=blender&logoColor=white)](https://www.blender.org/)
 [![Tests](https://img.shields.io/badge/tests-unit%20%2B%20E2E-37d78b)](#verification)
 
 ![DashEats gameplay overview](assets/dasheats-gameplay-overview.png)
@@ -41,6 +43,12 @@ The deterministic DriverSim scene and complete delivery flow are available witho
 | --- | --- |
 | ![Mobile driving controls](docs/showcase/07-mobile-driving.png) | ![Mobile wheel mode](docs/showcase/08-wheel-mode-mobile.png) |
 
+### Blender asset library
+
+![DashEats Blender vehicle and street asset library](public/assets/blender/asset-showcase.png)
+
+The source library is generated reproducibly at `E:\Blender - DashEats\source\DashEats-Asset-Library.blend`. Its headless build script exports compact animated glTF assets for the player car, traffic van, pedestrian, and service-station props into `public/assets/blender/`.
+
 ## Playable Flow
 
 1. Review payout, pickup, destination, distance, ETA, and priority.
@@ -54,11 +62,15 @@ The deterministic DriverSim scene and complete delivery flow are available witho
 ## Current Features
 
 - First-person cockpit and third-person chase cameras.
-- Deterministic throttle, braking, steering, grip, drag, fuel use, and speed enforcement.
-- Moving traffic, a police vehicle, traffic signals, city buildings, lane markings, and fog.
+- Rapier rigid-body physics with a dynamic chassis, CCD, raycast suspension, wheel grip, braking, and fixed-timestep simulation.
+- Collision response and damage tracking for traffic, pedestrians, buildings, trees, barriers, and service-station props.
+- Moving traffic with signal phases and headway braking, a police vehicle, animated pedestrians, traffic lights, lane markings, and fog.
+- Animated Blender-authored player vehicle and driver, with procedural fallbacks while assets stream.
 - Clear, rain, storm, daytime, and nighttime scene states.
 - Vehicle headlights, rain effects, audio feedback, and screen-state transitions.
-- Real OpenStreetMap tiles and a route-aware Leaflet minimap.
+- Click-to-pin OpenStreetMap navigation, world destination markers, road-aligned trail arrows, and wrong-way warnings.
+- Gasoline, hybrid, and electric vehicle profiles with tank/battery capacity, efficiency, range, local fuel prices, and refueling.
+- Houses, a hotel, restaurant pickup, customer drop-off, fuel station, organic building variation, and roadside vegetation.
 - Google Weather API current-conditions integration.
 - Lazy Google Photorealistic 3D Tiles mode rendered through CesiumJS.
 - OTP, store wait, photo proof, payout, fines, safety, and task-state progression.
@@ -92,6 +104,7 @@ Google tiles are a visual geospatial layer. A commercial release still needs a l
 ## Streaming and Performance
 
 - The HUD shell, Leaflet map, Three.js world, and Cesium bridge compile into separate browser chunks.
+- Rapier ships as a separate lazy WebAssembly payload instead of inflating the main application bundle.
 - Cesium is downloaded only after Google 3D mode is selected.
 - Google tiles use bounded cache and overflow budgets, screen-space error, skipped levels of detail, request rendering, and a capped render cadence.
 - Buildings use instanced meshes instead of one draw call per structure.
@@ -100,6 +113,18 @@ Google tiles are a visual geospatial layer. A commercial release still needs a l
 - Traffic reuses geometry and materials and updates only compact transforms.
 - Mobile portrait uses a camera-specific offset and simplified status HUD.
 - Static production assets ship with immutable one-year browser caching.
+
+## Blender Asset Pipeline
+
+Blender 5.2 LTS is installed as a portable tool beside the editable project:
+
+```powershell
+& 'E:\Blender - DashEats\tools\blender-5.2.4-windows-x64\blender.exe' `
+  --background `
+  --python 'E:\Blender - DashEats\scripts\build_assets.py'
+```
+
+The script rebuilds the `.blend` source, exports browser-ready `.glb` files, renders the asset showcase, and copies the runtime output into this repository. Blender meshes supply visuals and animation; Rapier owns authoritative collision and vehicle motion.
 
 ## Google API Setup
 
@@ -148,7 +173,7 @@ Unit tests validate valid and invalid task-state transitions:
 npm test
 ```
 
-Playwright runs the complete delivery lifecycle in Chromium, checks that WebGL produces a nonblank canvas, and verifies mobile touch and wheel-mode behavior:
+Playwright runs the complete delivery lifecycle in Chromium, checks that WebGL produces a nonblank canvas, verifies mobile touch and wheel-mode behavior, and drives the car into a collider to confirm real collision resolution:
 
 ```bash
 npx playwright install chromium
@@ -167,7 +192,8 @@ Input adapters
   -> keyboard | touch | gamepad | steering wheel
 
 Simulation
-  -> vehicle state | traffic | lights | police | fuel | weather | scoring
+  -> Rapier rigid body | raycast suspension | colliders | fixed 60 Hz step
+  -> traffic | signals | pedestrians | police | energy | weather | scoring
 
 World providers
   -> deterministic Three.js city
@@ -186,7 +212,7 @@ This repository is a production-built vertical slice, not a finished commercial 
 
 ## Technology
 
-React 19, TypeScript 7, Vite 8, Three.js, Leaflet, CesiumJS, Google Map Tiles API, Google Weather API, Vitest, Playwright, and Vercel.
+React 19, TypeScript 7, Vite 8, Three.js, Rapier 3D, Blender 5.2 LTS, glTF, Leaflet, CesiumJS, Google Map Tiles API, Google Weather API, Vitest, Playwright, and Vercel.
 
 ## License
 

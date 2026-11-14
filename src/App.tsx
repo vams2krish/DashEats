@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  BatteryCharging,
   Camera,
   CameraIcon,
   CarFront,
@@ -21,6 +22,7 @@ import {
   ShieldAlert,
   Sun,
   Volume2,
+  Wrench,
   X,
 } from 'lucide-react';
 import type {
@@ -28,7 +30,10 @@ import type {
   ControlMode,
   Telemetry,
   WeatherMode,
+  WorldTarget,
 } from './game/SimulationCanvas';
+import type { MapDestination } from './components/MiniMap';
+import { remainingRangeMiles, VEHICLE_SPECS, type Powertrain } from './game/vehicleSpecs';
 import { advanceTask, isDrivingStage, type TaskEvent, type TaskStage } from './game/taskMachine';
 
 const CesiumWorld = lazy(() => import('./components/CesiumWorld'));
@@ -45,7 +50,41 @@ const stageLabels: Record<TaskStage, string> = {
   complete: 'Delivery complete',
 };
 
-const initialTelemetry: Telemetry = { speed: 0, fuel: 76, heading: Math.PI, distance: 0, tickets: 0 };
+const initialTelemetry: Telemetry = {
+  speed: 0,
+  fuel: 76,
+  heading: Math.PI,
+  distance: 0,
+  tickets: 0,
+  collisions: 0,
+  damage: 0,
+  wrongWay: false,
+  nearStation: false,
+  refuelCost: 0,
+  rangeMiles: 342,
+};
+
+const defaultDestination: MapDestination = {
+  lat: 37.7771,
+  lng: -122.40574,
+  label: 'Jordan M. · House',
+  worldX: 79,
+  worldZ: -96,
+};
+
+const pickupTarget: WorldTarget = { x: -79, z: 48, label: 'Harbor Hotel Kitchen' };
+
+function destinationToWorld(destination: MapDestination): WorldTarget {
+  return {
+    x: destination.worldX ?? THREEClamp((destination.lng + 122.4068) * 18000, -205, 205),
+    z: destination.worldZ ?? THREEClamp((37.7828 - destination.lat) * 18000, -205, 205),
+    label: destination.label,
+  };
+}
+
+function THREEClamp(value: number, minimum: number, maximum: number) {
+  return Math.min(maximum, Math.max(minimum, value));
+}
 
 function emitInput(code: string, pressed: boolean) {
   window.dispatchEvent(new CustomEvent('dasheats-input', { detail: { code, pressed } }));
@@ -75,6 +114,7 @@ export default function App() {
   const [stage, setStage] = useState<TaskStage>('offer');
   const [cameraMode, setCameraMode] = useState<CameraMode>('chase');
   const [controlMode, setControlMode] = useState<ControlMode>('keyboard');
+  const [powertrain, setPowertrain] = useState<Powertrain>('gasoline');
   const [weather, setWeather] = useState<WeatherMode>('clear');
   const [night, setNight] = useState(false);
   const [autoDrive, setAutoDrive] = useState(false);
@@ -91,8 +131,14 @@ export default function App() {
   const [worldMode, setWorldMode] = useState<'sim' | 'google'>('sim');
   const [weatherLabel, setWeatherLabel] = useState('Simulated · Clear · 64°F');
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [destination, setDestination] = useState<MapDestination>(defaultDestination);
   const playSound = useGameAudio();
   const driving = isDrivingStage(stage);
+  const vehicleSpec = VEHICLE_SPECS[powertrain];
+  const routeTarget = useMemo(
+    () => (stage === 'toPickup' ? pickupTarget : destinationToWorld(destination)),
+    [destination, stage],
+  );
 
   const advance = useCallback(
     (event: TaskEvent) => {
@@ -105,6 +151,13 @@ export default function App() {
   useEffect(() => {
     if (!driving) setAutoDrive(false);
   }, [driving]);
+
+  useEffect(() => {
+    setTelemetry((current) => ({
+      ...current,
+      rangeMiles: remainingRangeMiles(VEHICLE_SPECS[powertrain], current.fuel),
+    }));
+  }, [powertrain]);
 
   useEffect(() => {
     if (!autoDrive || !driving) return;
@@ -180,7 +233,10 @@ export default function App() {
     setOtp('');
     setPhotoTaken(false);
     setWaitSeconds(8);
-    setTelemetry(initialTelemetry);
+    setTelemetry({
+      ...initialTelemetry,
+      rangeMiles: remainingRangeMiles(VEHICLE_SPECS[powertrain], initialTelemetry.fuel),
+    });
     playSound('tap');
   };
 
@@ -204,6 +260,8 @@ export default function App() {
               driving={driving}
               night={night}
               onTelemetry={setTelemetry}
+              powertrain={powertrain}
+              routeTarget={routeTarget}
               weather={weather}
             />
           )}</Suspense>
@@ -231,7 +289,7 @@ export default function App() {
         <h1>{stageLabels[stage]}</h1>
         <div className="route-stop active"><span>A</span><div><b>Harbor Kitchen</b><small>91 5th Street · 0.8 mi</small></div></div>
         <div className="route-line" />
-        <div className="route-stop"><span>B</span><div><b>Jordan M.</b><small>855 Bryant Street · 2.3 mi</small></div></div>
+        <div className="route-stop"><span>B</span><div><b>{destination.label}</b><small>{destination.lat.toFixed(4)}, {destination.lng.toFixed(4)} · 2.3 mi</small></div></div>
         <div className="mission-meta"><span>12 min</span><span>3.1 mi</span><span>Priority</span></div>
         {stage === 'offer' ? (
           <div className="offer-actions">
@@ -244,7 +302,9 @@ export default function App() {
       </aside>
 
       <aside className="map-panel">
-        <Suspense fallback={<div className="mini-map map-skeleton" />}><MiniMap progress={routeProgress} /></Suspense>
+        <Suspense fallback={<div className="mini-map map-skeleton" />}>
+          <MiniMap destination={destination} onDestinationChange={setDestination} progress={routeProgress} />
+        </Suspense>
         <div className="map-caption"><LocateFixed size={15} /><span>{direction}<small>in 450 ft</small></span></div>
       </aside>
 
@@ -252,10 +312,27 @@ export default function App() {
         <div className="speedometer"><span>{Math.round(telemetry.speed)}</span><small>MPH</small></div>
         <div className="speed-limit"><small>SPEED</small><b>35</b></div>
         <div className="vehicle-bars">
-          <div><Fuel size={16} /><span><i style={{ width: `${telemetry.fuel}%` }} /></span><b>{Math.round(telemetry.fuel)}%</b></div>
+          <div>{powertrain === 'electric' ? <BatteryCharging size={16} /> : <Fuel size={16} />}<span><i style={{ width: `${telemetry.fuel}%` }} /></span><b>{Math.round(telemetry.fuel)}%</b></div>
           <div><ShieldAlert size={16} /><span><i className="health" style={{ width: `${100 - telemetry.tickets * 12}%` }} /></span><b>{telemetry.tickets}</b></div>
         </div>
       </div>
+
+      <div className="vehicle-profile">
+        <span>{vehicleSpec.label}</span>
+        <b>{vehicleSpec.efficiencyLabel}</b>
+        <small>{Math.round(telemetry.rangeMiles)} mi range</small>
+        <Wrench size={14} />
+        <small data-testid="collision-count">{Math.round(telemetry.damage)}% · {telemetry.collisions} hits</small>
+      </div>
+
+      {telemetry.wrongWay && <div className="wrong-way-alert"><Navigation size={18} /> WRONG WAY</div>}
+
+      {telemetry.nearStation && (
+        <div className="refuel-panel">
+          <div>{powertrain === 'electric' ? <BatteryCharging size={18} /> : <Fuel size={18} />}<span>DashFuel<b>${vehicleSpec.price.toFixed(2)}{vehicleSpec.priceUnit}</b></span></div>
+          <button className="button primary" onClick={() => window.dispatchEvent(new Event('dasheats-refuel'))}>Refuel</button>
+        </div>
+      )}
 
       <div className="weather-chip"><CloudRain size={15} /> {weatherLabel}</div>
 
@@ -347,6 +424,15 @@ export default function App() {
             <div className="segmented">
               <button className={worldMode === 'sim' ? 'selected' : ''} onClick={() => setWorldMode('sim')}><CarFront size={17} /> DriverSim</button>
               <button className={worldMode === 'google' ? 'selected' : ''} disabled={!googleKey} onClick={() => setWorldMode('google')}><Map size={17} /> Google 3D</button>
+            </div>
+            <label>Vehicle</label>
+            <div className="segmented three vehicle-options">
+              {(['gasoline', 'hybrid', 'electric'] as Powertrain[]).map((mode) => (
+                <button key={mode} className={powertrain === mode ? 'selected' : ''} onClick={() => setPowertrain(mode)}>
+                  {mode === 'electric' ? <BatteryCharging size={16} /> : <Fuel size={16} />}
+                  {mode === 'gasoline' ? 'Gas' : mode === 'hybrid' ? 'Hybrid' : 'EV'}
+                </button>
+              ))}
             </div>
             <label>Input</label>
             <div className="segmented three">
