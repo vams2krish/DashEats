@@ -1,225 +1,189 @@
-# DashEats
+# DashEats DriverSim
 
-**A browser-based, geospatial delivery and rideshare driving simulator built around real-world locations, task-driven gameplay, and scalable 3D map streaming.**
+**A browser-native delivery and rideshare driving simulator built around real locations, task workflows, vehicle control, live weather, and streamable 3D worlds.**
+
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
+[![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev/)
+[![Three.js](https://img.shields.io/badge/Three.js-WebGL-111111?logo=threedotjs&logoColor=white)](https://threejs.org/)
+[![Tests](https://img.shields.io/badge/tests-unit%20%2B%20E2E-37d78b)](#verification)
 
 ![DashEats gameplay overview](assets/dasheats-gameplay-overview.png)
 
-DashEats turns the daily work of a courier or rideshare driver into a structured driving game. Players accept jobs, navigate real roads, collect packages or passengers, complete verification steps, and deliver safely before time expires. The experience combines a dispatch workflow inspired by delivery and rideshare platforms with first-person and third-person vehicle control, real-world geography, traffic rules, dynamic weather, vehicle management, and progression systems.
+DashEats turns courier and rideshare work into a structured driving game. Players review an offer, drive to a real-world pickup, complete an OTP check, experience store preparation delays, drive to the customer, capture delivery proof, and receive a scored payout. The vertical slice is playable with keyboard, touch controls, assisted driving, or a browser-exposed steering wheel/gamepad.
 
-> [!NOTE]
-> This initial public commit preserves the project specification, gameplay design, architecture, and generated visual showcase. The previous local browser-prototype source directory is no longer available on the workstation and is not represented as present in this commit. Application source will be restored or rebuilt in follow-up commits.
+## Product Demo
 
-## Project Vision
+### Dispatch and driving
 
-DashEats is designed as a browser-native simulation game where location is the game board. A proprietary activity engine can create delivery, courier, or passenger jobs with real pickup and drop-off coordinates. The player must physically drive the route using a car or bike while responding to road conditions, traffic, weather, time pressure, and customer confirmation requirements.
+| Job offer | Third-person drive |
+| --- | --- |
+| ![Dispatch offer](docs/showcase/01-dispatch-offer-desktop.png) | ![Third-person driving](docs/showcase/02-third-person-driving.png) |
 
-The long-term goal is a scalable simulation platform that supports:
+### Weather, pickup, and store operations
 
-- Real-world locations and route-aware tasks.
-- Photorealistic 3D buildings, roads, and terrain streamed as needed.
+| Cockpit in rain at night | Store preparation queue |
+| --- | --- |
+| ![Cockpit rain at night](docs/showcase/03-cockpit-rain-night.png) | ![Store wait workflow](docs/showcase/04-store-wait.png) |
+
+### Delivery completion
+
+| Photo proof | Run score and payout |
+| --- | --- |
+| ![Delivery photo proof](docs/showcase/05-photo-proof.png) | ![Completed delivery payout](docs/showcase/06-run-complete.png) |
+
+### Responsive controls
+
+| Mobile driving HUD | Wheel mode with touch HUD disabled |
+| --- | --- |
+| ![Mobile driving controls](docs/showcase/07-mobile-driving.png) | ![Mobile wheel mode](docs/showcase/08-wheel-mode-mobile.png) |
+
+## Playable Flow
+
+1. Review payout, pickup, destination, distance, ETA, and priority.
+2. Accept the task and drive to the restaurant.
+3. Enter the pickup OTP. The demo code is `4281`.
+4. Wait for the simulated store queue and preparation timer.
+5. Drive to the customer while managing speed, weather, fuel, and road traffic.
+6. Capture photo proof and confirm delivery.
+7. Review base pay, tip, fines, safety score, on-time score, and run grade.
+
+## Current Features
+
 - First-person cockpit and third-person chase cameras.
-- Car and bike handling with meaningful differences in acceleration, braking, grip, fuel use, and risk.
-- Delivery, package, and rideshare task variations.
-- Live weather and day/night conditions.
-- Keyboard, touch, gamepad, and PC steering-wheel input.
-- Desktop, Android, iPhone, and iPad browsers.
+- Deterministic throttle, braking, steering, grip, drag, fuel use, and speed enforcement.
+- Moving traffic, a police vehicle, traffic signals, city buildings, lane markings, and fog.
+- Clear, rain, storm, daytime, and nighttime scene states.
+- Vehicle headlights, rain effects, audio feedback, and screen-state transitions.
+- Real OpenStreetMap tiles and a route-aware Leaflet minimap.
+- Google Weather API current-conditions integration.
+- Lazy Google Photorealistic 3D Tiles mode rendered through CesiumJS.
+- OTP, store wait, photo proof, payout, fines, safety, and task-state progression.
+- Keyboard, touch, browser gamepad, and PC wheel/pedal input paths.
+- Android, iPhone, iPad, laptop, and desktop responsive layouts.
+- Accessible labels, focus states, reduced-motion handling, and mobile safe-area support.
 
-## Core Gameplay Loop
+## Controls
 
-1. **Go online** and receive a generated offer.
-2. **Review the job** including pickup, drop-off, distance, ETA, payout, bonus, cargo or passenger details, and confirmation rules.
-3. **Accept or decline** before the offer timer expires.
-4. **Drive to pickup** using real-world route guidance while following speed limits and traffic controls.
-5. **Complete pickup checks**, such as entering an OTP, confirming a passenger, or waiting for a store order.
-6. **Drive to the destination** while managing time, fuel, vehicle condition, weather, traffic, and police enforcement.
-7. **Complete drop-off proof**, such as a photo, signature, delivery confirmation, or passenger completion step.
-8. **Receive payout and a run grade** based on speed, safety, damage, tickets, delays, and successful confirmation.
+| Action | Keyboard | Touch / wheel |
+| --- | --- | --- |
+| Accelerate | `W` or `ArrowUp` | GO pedal / accelerator axis |
+| Brake | `S` or `ArrowDown` | BRAKE pedal / brake axis |
+| Steer | `A` `D` or arrow keys | Direction buttons / steering axis |
+| Camera | Camera button | Camera button |
+| Assisted drive | Auto drive button | Auto drive button |
 
-## Task System
+Selecting **Wheel** input mode removes the touch driving controls so hardware and HUD input cannot conflict.
 
-The activity engine is intended to support multiple job types from the same location-based contract:
+## Real-World Platform
 
-| Job type | Pickup flow | Drop-off flow | Possible complications |
-| --- | --- | --- | --- |
-| Food delivery | Arrive, park, wait for order | Photo or handoff confirmation | Store queue, missing order, late preparation |
-| Package delivery | Scan or collect package | Photo, signature, or secure placement | Fragile cargo, timed delivery, access restrictions |
-| Rideshare | Passenger OTP or identity check | Passenger completion | Passenger wait time, route change, rating impact |
-| Priority courier | Item verification | Recipient OTP or signature | Strict timer, bonus conditions, multiple stops |
+The default DriverSim world is deterministic and key-free, which makes the task flow available to every visitor. Real-world services are loaded only when requested:
 
-Each task may contain:
+- **Leaflet + OpenStreetMap** provide the lightweight route computer and street context.
+- **Google Weather API** maps current conditions into rain, storm, daylight, and temperature state.
+- **CesiumJS + Google Photorealistic 3D Tiles** stream real buildings and terrain from the Map Tiles API.
+- **Three.js** owns the interactive vehicle, traffic, lights, effects, and deterministic gameplay scene.
 
-- Geographic pickup and drop-off coordinates.
-- Offer expiration and completion time limits.
-- Base pay, distance pay, peak bonus, tips, and deductions.
-- Cargo, customer, or passenger notes.
-- OTP, signature, scan, or photo-proof requirements.
-- Store preparation time and queue simulation.
-- Multi-stage status progression from offer to completion.
+Google tiles are a visual geospatial layer. A commercial release still needs a licensed road graph and collision surface for lane-level physics, traffic rules, and authoritative navigation; photogrammetry alone is not a drivable physics mesh.
 
-## Driving Simulation
+## Streaming and Performance
 
-DashEats is modeled as a driving game rather than a passive moving map. The player controls steering, throttle, braking, and camera perspective while the simulation tracks:
+- The HUD shell, Leaflet map, Three.js world, and Cesium bridge compile into separate browser chunks.
+- Cesium is downloaded only after Google 3D mode is selected.
+- Google tiles use bounded cache and overflow budgets, screen-space error, skipped levels of detail, request rendering, and a capped render cadence.
+- Buildings use instanced meshes instead of one draw call per structure.
+- Telemetry is throttled independently from the render loop.
+- Render pixel ratio, antialiasing, and shadow work adapt to viewport size.
+- Traffic reuses geometry and materials and updates only compact transforms.
+- Mobile portrait uses a camera-specific offset and simplified status HUD.
+- Static production assets ship with immutable one-year browser caching.
 
-- Speed, acceleration, braking distance, steering response, and traction.
-- Weather-dependent grip and visibility.
-- Vehicle collisions and persistent damage.
-- City speed-limit zones and overspeed duration.
-- Traffic lights, road flow, and surrounding vehicles.
-- Police enforcement, tickets, and fines.
-- Fuel or battery consumption and roadside refueling.
-- Safety score, payout deductions, and end-of-run grades.
-- Car and bike profiles with different performance characteristics.
+## Google API Setup
 
-## Real-World 3D Environment
+Enable these APIs in the same Google Cloud project:
 
-The browser runtime is designed around CesiumJS and Google Photorealistic 3D Tiles rather than a Unity player. This allows the world to be streamed into WebGL-capable browsers while preserving real buildings, terrain, and city context.
+1. **Map Tiles API** for Photorealistic 3D Tiles.
+2. **Weather API** for current conditions.
 
-Planned and prototyped runtime responsibilities include:
-
-- **CesiumJS** for global-scale geospatial rendering and 3D Tiles streaming.
-- **Google Photorealistic 3D Tiles** for real-world buildings and terrain.
-- **Leaflet and OpenStreetMap** for the lightweight dispatch and fallback map.
-- **OSRM-compatible routing** for route geometry and navigation fallback.
-- **Three.js or custom WebGL layers** for vehicles, interactive props, effects, and gameplay-specific geometry where appropriate.
-- **Google Weather API** for live weather conditions, with simulated weather when API access is unavailable.
-
-Google Geospatial Creator is a Unity and ARCore authoring workflow, not the browser runtime itself. DashEats uses browser-compatible geospatial technologies while keeping task coordinates and scene anchors portable to a future native client.
-
-## World Simulation
-
-The environment is intended to feel inhabited and reactive:
-
-- Traffic vehicles follow road flow and respond to intersections.
-- Traffic lights cycle and affect safe-driving evaluation.
-- Police vehicles detect sustained speeding and reckless behavior.
-- Rain, fog, storms, and sunlight alter visibility and grip.
-- Wet roads produce reflections, spray, and longer stopping distances.
-- Day/night progression changes lighting, traffic mood, and visibility.
-- Fuel stations become required stops as the vehicle runs low.
-- Pickup and drop-off areas use route beacons and proximity triggers.
-- Audio and screen effects communicate weather, collisions, horns, fines, task changes, and confirmations.
-
-## Cameras and Controls
-
-### Camera modes
-
-- First-person cockpit view.
-- Third-person chase view.
-- Dispatch map view.
-- Optional geospatial overview for route inspection.
-
-### Input methods
-
-- Keyboard controls for steering, acceleration, braking, camera, and horn.
-- Touch controls with steering, pedals, camera switch, task actions, and map tools.
-- Standard browser gamepads.
-- PC steering wheels and pedals through the Gamepad API when exposed by the browser.
-
-Wheel mode is designed to disable keyboard and mobile driving HUDs so inputs do not conflict. Calibration stores steering and pedal ranges locally, while compatible devices may receive collision and ticket vibration feedback.
-
-## Responsive Experience
-
-The interface is designed for desktop and mobile browsers, including:
-
-- Android phone portrait and landscape.
-- iPhone portrait and landscape.
-- iPad portrait and landscape.
-- Desktop and laptop screens.
-
-The responsive design accounts for iOS safe areas, browser chrome, dynamic viewport height, device rotation, 44-pixel minimum touch targets, and reflow of the dispatch panel, route computer, driving HUD, pedals, camera controls, and map toolbar.
-
-Representative tested viewport sizes from the prototype were:
-
-`360x800`, `375x667`, `393x852`, `667x375`, `844x390`, `768x1024`, and `1024x768`.
-
-## Streaming and Rendering Strategy
-
-Photorealistic city data is too large to load as a conventional level. DashEats therefore treats the world as a continuously streamed, bounded working set.
-
-Key optimization principles include:
-
-- Bounded GPU tile caches instead of unbounded map retention.
-- Progressive and foveated tile loading that prioritizes the road ahead.
-- Dynamic screen-space error based on performance profile.
-- Request culling for tiles that are no longer relevant after camera movement.
-- Reduced update frequency for distant traffic, props, and geospatial anchors.
-- Level of detail for player vehicles, traffic, lights, particles, and shadows.
-- Adaptive render resolution and weather-particle density.
-- Suspended refinement and cache trimming when the 3D view is hidden.
-- Device-aware Performance, Balanced, Quality, and Adaptive profiles.
-- Frame-rate monitoring that steps quality down quickly and restores it conservatively.
-
-Google map content remains in the provider-approved runtime cache. The application does not attempt persistent or offline storage of licensed photorealistic tiles.
-
-## Proposed Architecture
+Create a browser key and restrict it to those APIs. Add HTTP referrer restrictions for:
 
 ```text
-Activity Engine
-  -> job offers, coordinates, timers, pay, confirmation requirements
-
-Game State
-  -> task stage, vehicle state, fines, fuel, damage, safety, payout
-
-Routing Layer
-  -> route geometry, navigation prompts, distance, ETA
-
-World Layer
-  -> CesiumJS, Google 3D Tiles, fallback map, streamed terrain
-
-Simulation Layer
-  -> vehicle physics, traffic, signals, police, weather, day/night
-
-Presentation Layer
-  -> HUD, task drawer, route computer, touch controls, effects, audio
-
-Input Layer
-  -> keyboard, touch, gamepad, steering wheel and pedals
+http://localhost:5173/*
+http://127.0.0.1:4178/*
+https://YOUR-VERCEL-DOMAIN/*
 ```
 
-For production, the task engine and player state should move behind authenticated backend APIs. Client-side simulation can remain responsive, but payouts, task completion, progression, and anti-cheat checks require server authority.
+Then create `.env.local`:
 
-## API and Security Model
+```bash
+VITE_GOOGLE_MAPS_API_KEY=your_restricted_browser_key
+```
 
-No API keys are committed to this repository.
+The key is intentionally absent from this repository. A `VITE_` key is included in the browser bundle by design, so referrer and API restrictions are mandatory. The settings panel can also retain a key in `sessionStorage` for the current tab only.
 
-Development keys should be:
+## Run Locally
 
-- Restricted by HTTP referrer.
-- Limited to only the required Google APIs.
-- Kept in local environment configuration or a secure runtime settings panel.
-- Replaced immediately if exposed in source control or public logs.
+```bash
+npm install
+npm run dev
+```
 
-Production should proxy sensitive business APIs through a backend and use provider-approved browser restrictions for public map tokens.
+Open `http://localhost:5173`.
 
-## Production Requirements
+Production build and preview:
 
-Before a commercial release, the project needs:
+```bash
+npm run build
+npm run preview
+```
 
-- A licensed routing and road-rules data source.
-- Backend task orchestration and persistent player accounts.
-- Secure media upload for delivery proof.
-- Anti-cheat and server-side task validation.
-- Commercial vehicle, character, sound, and effect assets.
-- Road-aware collision and navigation data separate from visual 3D tiles.
-- Telemetry, crash reporting, analytics, and live-operations tooling.
-- Accessibility, localization, privacy, and legal review.
-- Load, device, network, and battery testing at production scale.
+## Verification
 
-## Current Repository Status
+Unit tests validate valid and invalid task-state transitions:
 
-This commit establishes the public product overview and preserves the current visual direction. The next repository milestone is to restore or rebuild the browser vertical slice, followed by repeatable setup instructions, automated checks, and a hosted demo.
+```bash
+npm test
+```
 
-## Roadmap
+Playwright runs the complete delivery lifecycle in Chromium, checks that WebGL produces a nonblank canvas, and verifies mobile touch and wheel-mode behavior:
 
-- [ ] Restore the browser prototype source.
-- [ ] Add repeatable local development and build scripts.
-- [ ] Add environment-variable templates without secrets.
-- [ ] Reconnect the dispatch map, 3D drive view, and activity engine.
-- [ ] Add deterministic vehicle and task-system tests.
-- [ ] Add hosted preview deployment.
-- [ ] Add backend persistence and authenticated profiles.
-- [ ] Add multiplayer events, fleet progression, and live operations.
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
 
-## Project Name
+The end-to-end suite also produces the screenshots in `docs/showcase/` from the actual production build.
 
-**DashEats DriverSim** is the game experience. **DashEats** is the repository and platform name.
+## Architecture
+
+```text
+Activity / task state machine
+  -> offer -> pickup -> OTP -> queue -> drop-off -> proof -> payout
+
+Input adapters
+  -> keyboard | touch | gamepad | steering wheel
+
+Simulation
+  -> vehicle state | traffic | lights | police | fuel | weather | scoring
+
+World providers
+  -> deterministic Three.js city
+  -> lazy CesiumJS + Google Photorealistic 3D Tiles
+
+Geospatial services
+  -> OpenStreetMap route context | Google Weather API
+
+Presentation
+  -> responsive HUD | task panels | effects | audio | modal workflows
+```
+
+## Production Boundaries
+
+This repository is a production-built vertical slice, not a finished commercial driving platform. Server-authoritative jobs, accounts, persistent progression, secure proof uploads, anti-cheat validation, licensed road rules, commercial assets, and telemetry remain backend milestones. Google 3D mode currently demonstrates streamed world rendering; the deterministic DriverSim scene remains the fully integrated driving and task environment.
+
+## Technology
+
+React 19, TypeScript 7, Vite 8, Three.js, Leaflet, CesiumJS, Google Map Tiles API, Google Weather API, Vitest, Playwright, and Vercel.
+
+## License
+
+No open-source license has been granted yet. All rights reserved by the repository owner.
