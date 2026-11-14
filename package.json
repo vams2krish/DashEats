@@ -18,6 +18,8 @@
     "three": "^0.187.0"
   },
   "devDependencies": {
+    "@emnapi/core": "^2.0.0-beta.2",
+    "@emnapi/runtime": "^2.0.0-beta.2",
     "@playwright/test": "^1.49.1",
     "@types/leaflet": "^1.9.15",
     "@types/react": "^19.3.0",
